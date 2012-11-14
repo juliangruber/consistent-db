@@ -12,11 +12,24 @@ Open questions:
   remove a node and keep using set without replication
 * How to persist `set` on disk
 
+Coordination
+
+* Known cluster size
+* Master registry
+* A random node serves as master registry
+* Only equal nodes
+
 ## Scenarios
 
-* 2 nodes, connection breaks => halt updates
+What might happen
+
+* connection breaks
+* node crashes and restarts
+* node crashes and remains down
+
+* 2 nodes, connection breaks => halt updates because no winner can be determined
 * 3 nodes, connection breaks => 2 nodes replicate, 3rd halts
-* 4 nodes, connection breaks => one half replicates, other halts
+* 4 nodes, connection breaks => halt updates because no winner can be determined
 
 => If the node graph is split, only one half can continue working
 
@@ -92,6 +105,28 @@ node(1-3) then
   * If so, tell node(0) about that node and repeat the package sending to those
     new ones, with an updated `nodes-checked` field.
   * If not so, send an `accept:ts` message to all nodes
+
+## Failure handling
+
+What about more than 2 partitions?
+
+### One node
+
+If there is only one node, there's no need to do anything. It just fails.
+
+### Same partition sizes after split
+
+If both partitions are the same size after a split, a winner has to be picked:
+
+Each node calculates a random score on start and replicates this score as well
+as receives and saves other nodes' scores. If then the graph is split, the still
+connected nodes add their scores and then know if they or the other half have
+a higher score. The half with the lower score will not respond to requests until
+the graph is joined again.
+
+### Different partition sizes after split
+
+If partitions have different sizes after a split, the bigger partition wins.
 
 ## License
 
